@@ -3,6 +3,10 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"crypto/sha256"
+    "encoding/base64"
+    "net/url"
+    "strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -25,55 +29,110 @@ func setupRouter() *gin.Engine {
 	// Shorten redirect URL
 	r.GET("/:url", urlRetrieval)
 
-
 	return r
 }
 
 func urlSubmission(c *gin.Context) {
 	// Parse the JSON request body
 	url := c.Request.FormValue("url")
-	fmt.Printf("Processing " + fmt.Sprintf("%s", url))
-
-	if url == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No URL input provided"})
-		return
-	}
-
-	// Create a new item to be inserted into the DynamoDB table
-	item := map[string]*dynamodb.AttributeValue{
-		"url":             {S: aws.String(url)},
-		"shorternedUrl": {S: aws.String(generateShortURL(url))}, // Replace generateShortURL with your own logic for generating short URLs
-	}
-
-	// Create the input configuration instance
-	input := &dynamodb.PutItemInput{
-		Item:      item,
-		TableName: aws.String("UrlMap"), // Replace with your actual table name
-	}
-
-	// Put the item into the DynamoDB table
-	_, err := svc.PutItem(input)
+	fmt.Printf("On urlSubmission " + fmt.Sprintf("%s", url))
+	shortURL, err := processURL(url, svc)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store URL"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	fmt.Println(fmt.Sprintf("%s", shortURL))
 
-	c.JSON(http.StatusOK, gin.H{"message": "URL stored successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "URL stored successfully", "shortenedUrl": shortURL})
 }
 
-func generateShortURL(longURL string) string {
-    // Generate a short URL based on the long URL
-    // Implement your logic here
+func generateBase64Path(originalURL string) string {
+    // Parse the original URL
+    parsedURL, err := url.Parse(originalURL)
+    if err != nil {
+        // handle error
+        return ""
+    }
 
-    shortURL := "http://shorturl.com/abcd" // Replace with your actual implementation
+    // Hash the URL path using SHA-256
+    hasher := sha256.New()
+    hasher.Write([]byte(parsedURL.Path))
+    hash := hasher.Sum(nil)
 
-    return shortURL
+    // Encode the hash using base64
+    base64EncodedHash := base64.URLEncoding.EncodeToString(hash)
+
+    // Ensure the encoded hash matches the regex pattern /[a-zA-Z0-9]{9}/
+    base64EncodedHash = strings.TrimRight(base64EncodedHash, "=")
+    if len(base64EncodedHash) > 9 {
+        base64EncodedHash = base64EncodedHash[:9]
+    } else if len(base64EncodedHash) < 9 {
+        base64EncodedHash = strings.Repeat("a", 9-len(base64EncodedHash)) + base64EncodedHash
+    }
+
+    return base64EncodedHash
+}
+
+func processURL(longURL string, svc *dynamodb.DynamoDB) (string, error) {
+	fmt.Printf("Processing %s\n", longURL)
+
+	// Generate a shortened URL (you'll need to implement this logic)
+	shortenedURLPath := generateBase64Path(longURL)
+
+	item := map[string]*dynamodb.AttributeValue{
+		"url":          {S: aws.String(longURL)},
+		"shortenedUrl": {S: aws.String(shortenedURLPath)},
+		// Add any other attributes as needed
+	}
+
+	input := &dynamodb.PutItemInput{
+		TableName: aws.String("UrlMap"),
+		Item:      item,
+	}
+
+	_, err := svc.PutItem(input)
+	if err != nil {
+		return "", fmt.Errorf("error putting item in DynamoDB: %w", err)
+	}
+
+	fmt.Println("Item put successfully!")
+	return shortenedURLPath, nil
 }
 
 func urlRetrieval(c *gin.Context) {
-	fmt.Println("On urlRetrieval")
-	// c.Redirect(http.StatusFound, "http://www.google.com/")
-	c.Redirect(http.StatusFound, "/new-url")
+    fmt.Println("On urlRetrieval")
+
+    // Get the shortened URL from the request path parameter
+    shortenedURL := c.Param("url")
+    fmt.Printf("Loading short url %s\n", shortenedURL)
+
+    // Query DynamoDB to get the original URL
+    input := &dynamodb.GetItemInput{
+        TableName: aws.String("UrlMap"),
+        Key: map[string]*dynamodb.AttributeValue{
+            "shortenedUrl": {S: aws.String(shortenedURL)},
+        },
+    }
+
+    result, err := svc.GetItem(input)
+    if err != nil {
+        fmt.Println("Error retrieving item from DynamoDB:", err)
+        c.String(http.StatusInternalServerError, "Error retrieving URL")
+        return
+    }
+
+    if result.Item == nil {
+        fmt.Println("URL not found in DynamoDB")
+        c.String(http.StatusNotFound, "URL not found")
+        return
+    }
+
+    // Extract the original URL from the DynamoDB response
+    originalURL := *result.Item["url"].S
+    fmt.Printf("Retrieved original URL: %s\n", originalURL)
+
+    // Redirect the user to the original URL
+    c.Redirect(http.StatusMovedPermanently, originalURL)
 }
 
 func getAllTables(c *gin.Context, svc *dynamodb.DynamoDB) {
@@ -87,11 +146,13 @@ func getAllTables(c *gin.Context, svc *dynamodb.DynamoDB) {
 		result, err := svc.ListTables(input)
 		if err != nil {
 			fmt.Println(err.Error())
+			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		for _, n := range result.TableNames {
 			fmt.Println(*n)
+			c.String(http.StatusOK, *n)
 		}
 
 		// Assign the last read tablename as the start for our next call to the ListTables function
