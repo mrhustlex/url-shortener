@@ -27,7 +27,8 @@ Database: NoSQL(Amazon DynamoDB)
 POST/new_url
 Logic:
 Assuming the NoSQL Database is a hashmap with original url(oUrl) as key and shortened URL(sURL) as value
-Sudo code logic for Database storing
+
+#### Sudo code logic for URL creation 
 * For every new URL, check if the oURL exist in key.
   * If the URL exist,
     * return the value from the database
@@ -38,7 +39,7 @@ Sudo code logic for Database storing
 GET/{shortenedUrl}
 * The shortenedUrl will follow the regex /[a-zA-Z0-9]{9}/ (a string consisting of exactly 9 characters, where each character is either a lowercase letter (a-z), an uppercase letter (A-Z), or a digit (0-9).)
 
-Sudo code logic for Database storing
+#### Sudo code logic for URL retrieving
 * Search if the key exists in Cache
   * If the URL exist,
     * return the value from the database
