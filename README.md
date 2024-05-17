@@ -1,6 +1,7 @@
 # url-shortener
 This project is working on an URL shortener powered by GoLang
 ## System Design
+![alt text](https://github.com/mrhustlex/url-shortener/blob/main/architecture.png?raw=true)
 
 ### Functional Requirement
 * Shorten an URL
