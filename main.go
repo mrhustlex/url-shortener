@@ -27,11 +27,11 @@ func setupRouter() *gin.Engine {
 	r.GET("/getTables", func(c *gin.Context) {
 		getAllTables(c, svc)
 	})
-	r.GET("/redirect", func(c *gin.Context) {
-		c.Redirect(http.StatusMovedPermanently, "http://www.aws.amazon.com")
-	})
-	// Shorten redirect URL
-	// r.GET("/:url", urlRetrieval)
+	// r.GET("/redirect", func(c *gin.Context) {
+	// 	c.Redirect(http.StatusMovedPermanently, "http://www.aws.amazon.com")
+	// })
+	Shorten redirect URL
+	r.GET("/:url", urlRetrieval)
 
 	return r
 }
