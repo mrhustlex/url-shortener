@@ -63,18 +63,17 @@ The shortenedUrl will follow the regex /[a-zA-Z0-9]{9}/ (a string consisting of 
       * Else
         * return error with value not found
 ## Database schema design
-We are levearaging the DynamoDB with 1 partition kay ,1 sort key. Since there is no complex relation for this application, there will only be one table "UrlMap". Here is the expected schema.
+We are levearaging the DynamoDB with 1 partition kay. Since there is no complex relation for this application, there will only be one table "UrlMap". Here is the expected schema.
 
 var schema = {
     TableName : "UrlMap",
     KeySchema : [ {
         AttributeName : "url",
-        KeyType : "HASH"
-    }, //Partition key
+    }, 
     {
         AttributeName : "shorternedUrl",
-        KeyType : "RANGE"
-    } //Sort key
+        KeyType : "HASH"
+    } //Partition key
     ],
     ProvisionedThroughput : {
         ReadCapacityUnits : 10,
@@ -86,21 +85,31 @@ Local Cli command
 aws dynamodb create-table \
     --table-name UrlMap \
     --attribute-definitions \
-        AttributeName=url,AttributeType=S \
         AttributeName=shortenedUrl,AttributeType=S \
     --key-schema \
-        AttributeName=url,KeyType=HASH \
-        AttributeName=shortenedUrl,KeyType=RANGE \
+        AttributeName=shortenedUrl,KeyType=HASH \
     --provisioned-throughput \
-        ReadCapacityUnits=10,WriteCapacityUnits=10 \
-    --table-class STANDARD \
-    --endpoint-url http://localhost:8000
+        ReadCapacityUnits=5,WriteCapacityUnits=5 \
+    --table-class STANDARD --endpoint-url http://localhost:8000 
+
+Put Sample item
+aws dynamodb put-item \
+    --table-name UrlMap  \
+    --item \
+        '{"shortenedUrl": {"S": "abc"}, "url": {"S": "www.google.com"}, "Count": {"N": "1"}}' --endpoint-url http://localhost:8000
+
+Get item with key
+aws dynamodb get-item --consistent-read \
+    --table-name UrlMap --key '{ "shortenedUrl": {"S": "abc"}}' --endpoint-url http://localhost:8000  
+
 
 Command to list the table
 aws dynamodb describe-table \
     --table-name UrlMap \
     --endpoint-url http://localhost:8000
 
+Command for table scan
+aws dynamodb scan --table-name UrlMap --endpoint-url http://localhost:8000     
 
 Auto Scaling
 

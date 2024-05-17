@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/gin-gonic/gin"
 )
+var svc *dynamodb.DynamoDB
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
@@ -26,8 +27,11 @@ func setupRouter() *gin.Engine {
 	r.GET("/getTables", func(c *gin.Context) {
 		getAllTables(c, svc)
 	})
+	r.GET("/redirect", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "http://www.aws.amazon.com")
+	})
 	// Shorten redirect URL
-	r.GET("/:url", urlRetrieval)
+	// r.GET("/:url", urlRetrieval)
 
 	return r
 }
@@ -46,43 +50,20 @@ func urlSubmission(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "URL stored successfully", "shortenedUrl": shortURL})
 }
 
-func generateBase64Path(originalURL string) string {
-    // Parse the original URL
-    parsedURL, err := url.Parse(originalURL)
-    if err != nil {
-        // handle error
-        return ""
-    }
-
-    // Hash the URL path using SHA-256
-    hasher := sha256.New()
-    hasher.Write([]byte(parsedURL.Path))
-    hash := hasher.Sum(nil)
-
-    // Encode the hash using base64
-    base64EncodedHash := base64.URLEncoding.EncodeToString(hash)
-
-    // Ensure the encoded hash matches the regex pattern /[a-zA-Z0-9]{9}/
-    base64EncodedHash = strings.TrimRight(base64EncodedHash, "=")
-    if len(base64EncodedHash) > 9 {
-        base64EncodedHash = base64EncodedHash[:9]
-    } else if len(base64EncodedHash) < 9 {
-        base64EncodedHash = strings.Repeat("a", 9-len(base64EncodedHash)) + base64EncodedHash
-    }
-
-    return base64EncodedHash
+func generateShortPath(originalURL string) string {
+    return "47DEQpj8H"
 }
 
 func processURL(longURL string, svc *dynamodb.DynamoDB) (string, error) {
 	fmt.Printf("Processing %s\n", longURL)
 
 	// Generate a shortened URL (you'll need to implement this logic)
-	shortenedURLPath := generateBase64Path(longURL)
+	shortenedURLPath := generateShortPath(longURL)
 
 	item := map[string]*dynamodb.AttributeValue{
 		"url":          {S: aws.String(longURL)},
 		"shortenedUrl": {S: aws.String(shortenedURLPath)},
-		// Add any other attributes as needed
+		"Count":		{N: aws.String("1")},
 	}
 
 	input := &dynamodb.PutItemInput{
@@ -99,40 +80,35 @@ func processURL(longURL string, svc *dynamodb.DynamoDB) (string, error) {
 	return shortenedURLPath, nil
 }
 
+
+
+
 func urlRetrieval(c *gin.Context) {
     fmt.Println("On urlRetrieval")
 
     // Get the shortened URL from the request path parameter
     shortenedURL := c.Param("url")
-    fmt.Printf("Loading short url %s\n", shortenedURL)
-
-    // Query DynamoDB to get the original URL
-    input := &dynamodb.GetItemInput{
-        TableName: aws.String("UrlMap"),
-        Key: map[string]*dynamodb.AttributeValue{
-            "shortenedUrl": {S: aws.String(shortenedURL)},
+	params := &dynamodb.GetItemInput{
+        Key: map[string]*dynamodb.AttributeValue{ 
+            "shortenedUrl": { 
+                S: aws.String(shortenedURL),
+            },
         },
+        TableName: aws.String("UrlMap"), 
+        ConsistentRead: aws.Bool(true),
     }
+    resp, err := svc.GetItem(params)
 
-    result, err := svc.GetItem(input)
     if err != nil {
-        fmt.Println("Error retrieving item from DynamoDB:", err)
-        c.String(http.StatusInternalServerError, "Error retrieving URL")
-        return
-    }
+        fmt.Println("Query failed", err)
+    }else{
+		originalURL := *resp.Item["url"].S
+		fmt.Printf("Retrieved original URL: %s\n", originalURL)
+		// // Redirect the user to the original URL
+		c.Redirect(http.StatusMovedPermanently, "http://www.google.com")
+	}
 
-    if result.Item == nil {
-        fmt.Println("URL not found in DynamoDB")
-        c.String(http.StatusNotFound, "URL not found")
-        return
-    }
-
-    // Extract the original URL from the DynamoDB response
-    originalURL := *result.Item["url"].S
-    fmt.Printf("Retrieved original URL: %s\n", originalURL)
-
-    // Redirect the user to the original URL
-    c.Redirect(http.StatusMovedPermanently, originalURL)
+	
 }
 
 func getAllTables(c *gin.Context, svc *dynamodb.DynamoDB) {
@@ -166,8 +142,6 @@ func getAllTables(c *gin.Context, svc *dynamodb.DynamoDB) {
 	}
 }
 
-var svc *dynamodb.DynamoDB
-
 func main() {
 	// Initialize a session that the SDK will use to load
 	// credentials from the shared credentials file ~/.aws/credentials
@@ -178,7 +152,6 @@ func main() {
 
 	// Create DynamoDB client
 	svc = dynamodb.New(sess, &aws.Config{Endpoint: aws.String("http://localhost:8000")})
-
 	r := setupRouter()
 	r.Run(":8080")
 }
