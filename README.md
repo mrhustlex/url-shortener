@@ -1,6 +1,7 @@
 # url-shortener
 This project is working on an URL shortener powered by GoLang
 ## System Design
+![alt text](https://github.com/mrhustlex/url-shortener/blob/main/architecture.png?raw=true)
 /architecture.png in github
 
 ### Functional Requirement
@@ -38,7 +39,6 @@ Assuming the NoSQL Database is a hashmap with original url(oUrl) as key and shor
 
 GET/{shortenedUrl}
 The shortenedUrl will follow the regex /[a-zA-Z0-9]{9}/ (a string consisting of exactly 9 characters, where each character is either a lowercase letter (a-z), an uppercase letter (A-Z), or a digit (0-9).)
-<<<<<<< HEAD
 
 #### Sudo code logic for URL retrieving
 * Search if the key exists in Cache
@@ -50,8 +50,7 @@ The shortenedUrl will follow the regex /[a-zA-Z0-9]{9}/ (a string consisting of 
         * return the value from the database
       * Else
         * return error with value not found
-=======
->>>>>>> a507e6fe852165e2b30c4ec7a54c903f7fe55652
+
 
 #### Sudo code logic for URL retrieving
 * Search if the key exists in Cache
@@ -83,6 +82,7 @@ var schema = {
 };
 
 Local Cli command
+
 aws dynamodb create-table \
     --table-name UrlMap \
     --attribute-definitions \
@@ -94,27 +94,35 @@ aws dynamodb create-table \
     --table-class STANDARD --endpoint-url http://localhost:8000 
 
 Put Sample item
+
 aws dynamodb put-item \
     --table-name UrlMap  \
     --item \
         '{"shortenedUrl": {"S": "abc"}, "url": {"S": "www.google.com"}, "Count": {"N": "1"}}' --endpoint-url http://localhost:8000
 
 Get item with key
+
 aws dynamodb get-item --consistent-read \
     --table-name UrlMap --key '{ "shortenedUrl": {"S": "abc"}}' --endpoint-url http://localhost:8000  
 
 
 Command to list the table
+
 aws dynamodb describe-table \
     --table-name UrlMap \
     --endpoint-url http://localhost:8000
 
 Command for table scan
+
 aws dynamodb scan --table-name UrlMap --endpoint-url http://localhost:8000     
 
 Auto Scaling
 
+Base on CPU utilization, set up autoscaling policy. WAF inplace to rate limit on ALB side
+
 Indexing
+
+DB indexing could be implemented in long term if more fields are added. So far this is just a simple hashtable concept
 
 
 ### The reason for this implementation
