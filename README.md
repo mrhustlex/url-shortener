@@ -128,7 +128,27 @@ DB indexing could be implemented in long term if more fields are added. So far t
 ### The reason for this implementation
 
 ## Assumption
-1. The same URL also returns with the same shortened URL
+1. There is no validation to the url incoming/escape unwanna characters yet
+2. Cache has not implemented yet
 
-### How to run the DB
-java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb
+
+### How to run the application
+1. Go into database/dynamodb_local_latest and run """java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb"""
+2. create database table with the following command
+"""
+aws dynamodb create-table \
+    --table-name UrlMap \
+    --attribute-definitions \
+        AttributeName=shortenedUrl,AttributeType=S \
+    --key-schema \
+        AttributeName=shortenedUrl,KeyType=HASH \
+    --provisioned-throughput \
+        ReadCapacityUnits=5,WriteCapacityUnits=5 \
+    --table-class STANDARD --endpoint-url http://localhost:8000 
+"""
+3. run the application by """ go run main.go"""
+
+4. Use the postman_test.json to test the url post and get 
+
+### Clean up:
+aws dynamodb delete-table --table-name UrlMap --endpoint-url http://localhost:8000

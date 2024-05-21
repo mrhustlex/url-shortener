@@ -128,7 +128,7 @@ func urlRetrieval(c *gin.Context) {
 		originalURL := *resp.Item["url"].S
 		fmt.Printf("Retrieved original URL: %s\n", originalURL)
 		// // Redirect the user to the original URL
-		c.Redirect(http.StatusMovedPermanently, "http://www.google.com")
+		c.Redirect(http.StatusMovedPermanently, originalURL)
 	}
 
 	

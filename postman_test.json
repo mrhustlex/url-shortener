@@ -1,0 +1,47 @@
+{
+	"info": {
+		"_postman_id": "bd0cea5c-4dbe-4043-9b0f-b1a1e4cfcefa",
+		"name": "New Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "2478672"
+	},
+	"item": [
+		{
+			"name": "redirection for short link",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/c43fNbOoG",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"c43fNbOoG"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "new_url",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/new_url",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"new_url"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
