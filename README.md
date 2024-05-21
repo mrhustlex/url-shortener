@@ -1,6 +1,7 @@
 # url-shortener
 This project is working on an URL shortener powered by GoLang
 ## System Design
+/architecture.png in github
 
 ### Functional Requirement
 * Shorten an URL
@@ -120,3 +121,6 @@ Indexing
 
 ## Assumption
 1. The same URL also returns with the same shortened URL
+
+### How to run the DB
+java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb

@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
+	"crypto/sha1"
+    "fmt"
+    "math/rand"
+    "time"
 	"net/http"
-	"crypto/sha256"
-    "encoding/base64"
-    "net/url"
-    "strings"
+		"encoding/base64"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -30,7 +30,7 @@ func setupRouter() *gin.Engine {
 	// r.GET("/redirect", func(c *gin.Context) {
 	// 	c.Redirect(http.StatusMovedPermanently, "http://www.aws.amazon.com")
 	// })
-	Shorten redirect URL
+	// Shorten redirect URL
 	r.GET("/:url", urlRetrieval)
 
 	return r
@@ -50,15 +50,37 @@ func urlSubmission(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "URL stored successfully", "shortenedUrl": shortURL})
 }
 
-func generateShortPath(originalURL string) string {
-    return "47DEQpj8H"
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+func generateShortPath(longURL string) string {
+    // Generate a unique string from the long URL using SHA-1 hashing
+    h := sha1.New()
+    h.Write([]byte(longURL))
+    hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
+
+    // Use current time to add randomness to the string
+    rand.Seed(time.Now().UnixNano())
+
+    // Generate a random string of length 9 using the letterRunes
+    b := make([]rune, 9)
+    for i := range b {
+        b[i] = letterRunes[rand.Intn(len(letterRunes))]
+    }
+    randomString := string(b)
+
+    // Combine the first 8 characters of the hash and the random string to create the short URL
+    shortURL := hash[:8] + randomString[:1]
+
+    return shortURL
 }
 
 func processURL(longURL string, svc *dynamodb.DynamoDB) (string, error) {
 	fmt.Printf("Processing %s\n", longURL)
-
 	// Generate a shortened URL (you'll need to implement this logic)
 	shortenedURLPath := generateShortPath(longURL)
+
+	fmt.Printf("Short path: %s\n", shortenedURLPath)
 
 	item := map[string]*dynamodb.AttributeValue{
 		"url":          {S: aws.String(longURL)},
