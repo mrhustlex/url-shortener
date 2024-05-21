@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 var svc *dynamodb.DynamoDB
+var domain ="http://localhost:8080/"
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
@@ -47,7 +48,7 @@ func urlSubmission(c *gin.Context) {
 	}
 	fmt.Println(fmt.Sprintf("%s", shortURL))
 
-	c.JSON(http.StatusOK, gin.H{"message": "URL stored successfully", "shortenedUrl": shortURL})
+	c.JSON(http.StatusOK, gin.H{"message": "URL stored successfully", "shortenedUrl": domain+shortURL})
 }
 
 
